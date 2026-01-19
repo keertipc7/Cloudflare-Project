@@ -10,7 +10,7 @@ crons = ["0 */6 * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "feedback-db"
-database_id = "42436582-9c22-452c-97aa-a90512ac3eab" # Replace after creating D1 database
+database_id = "bdfea74e-58c8-4607-b1fc-d3eaf865095c" 
 
 # Workers AI binding
 [ai]

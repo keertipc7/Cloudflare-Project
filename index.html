@@ -71,8 +71,8 @@
         }
 
         .stat-card.new { border-left: 4px solid #f59e0b; }
-        .stat-card.pending { border-left: 4px solid #3b82f6; }
-        .stat-card.resolved { border-left: 4px solid #10b981; }
+        .stat-card.in-progress { border-left: 4px solid #3b82f6; }
+        .stat-card.fixed { border-left: 4px solid #10b981; }
         .stat-card.total { border-left: 4px solid #8b5cf6; }
 
         .tabs {
@@ -192,8 +192,41 @@
         }
 
         .status-new { background: #fef3c7; color: #92400e; }
-        .status-pending { background: #dbeafe; color: #1e40af; }
-        .status-resolved { background: #d1fae5; color: #065f46; }
+        .status-in-progress { background: #dbeafe; color: #1e40af; }
+        .status-fixed { background: #d1fae5; color: #065f46; }
+
+        .score-change {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .score-increase {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .score-stable {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+
+        .unique-reporters {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #ede9fe;
+            color: #5b21b6;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+        }
 
         .action-buttons {
             display: flex;
@@ -302,13 +335,13 @@
                 <h3>New Issues</h3>
                 <div class="value" id="stat-new">-</div>
             </div>
-            <div class="stat-card pending">
-                <h3>Pending Issues</h3>
-                <div class="value" id="stat-pending">-</div>
+            <div class="stat-card in-progress">
+                <h3>In Progress</h3>
+                <div class="value" id="stat-in-progress">-</div>
             </div>
-            <div class="stat-card resolved">
-                <h3>Resolved Issues</h3>
-                <div class="value" id="stat-resolved">-</div>
+            <div class="stat-card fixed">
+                <h3>Fixed Issues</h3>
+                <div class="value" id="stat-fixed">-</div>
             </div>
             <div class="stat-card total">
                 <h3>Total Feedback</h3>
@@ -318,9 +351,8 @@
 
         <div class="tabs">
             <button class="tab active" data-view="new">New Issues</button>
-            <button class="tab" data-view="pending">Pending Issues</button>
-            <button class="tab" data-view="trending">Trending Issues</button>
-            <button class="tab" data-view="resolved">Resolved - Awaiting Deploy</button>
+            <button class="tab" data-view="in-progress">In Progress</button>
+            <button class="tab" data-view="fixed">Fixed Issues</button>
         </div>
 
         <div class="issues-container" id="issues-container">
@@ -362,8 +394,8 @@
                 const stats = await response.json();
                 
                 document.getElementById('stat-new').textContent = stats.newIssues;
-                document.getElementById('stat-pending').textContent = stats.pendingIssues;
-                document.getElementById('stat-resolved').textContent = stats.resolvedIssues;
+                document.getElementById('stat-in-progress').textContent = stats.inProgressIssues;
+                document.getElementById('stat-fixed').textContent = stats.fixedIssues;
                 document.getElementById('stat-total').textContent = stats.totalFeedback;
             } catch (error) {
                 console.error('Error loading stats:', error);
@@ -404,14 +436,29 @@
         function renderIssue(issue) {
             const keywords = JSON.parse(issue.keywords || '[]');
             const relatedIds = JSON.parse(issue.related_feedback_ids || '[]');
+            const uniqueReporters = JSON.parse(issue.unique_reporters || '[]');
             const firstSeen = new Date(issue.first_seen).toLocaleDateString();
             const lastSeen = new Date(issue.last_seen).toLocaleDateString();
+            
+            // Calculate score change since status change - ONLY for in-progress
+            const scoreChange = issue.weighted_score - (issue.score_at_status_change || 0);
+            const showScoreChange = issue.status === 'in-progress';
+            
+            let scoreChangeHTML = '';
+            if (showScoreChange && scoreChange > 0) {
+                scoreChangeHTML = `<span class="score-change score-increase">↑ +${Math.round(scoreChange)} since in-progress started</span>`;
+            } else if (showScoreChange && scoreChange === 0) {
+                scoreChangeHTML = `<span class="score-change score-stable">No change yet</span>`;
+            }
 
             return `
                 <div class="issue-card">
                     <div class="issue-header">
                         <div class="issue-title">${issue.title}</div>
-                        <div class="issue-score">Score: ${Math.round(issue.weighted_score)}</div>
+                        <div class="issue-score">
+                            Score: ${Math.round(issue.weighted_score)}
+                            ${scoreChangeHTML}
+                        </div>
                     </div>
                     
                     <div class="issue-meta">
@@ -420,6 +467,11 @@
                         </div>
                         <div class="meta-item">
                             <strong>${relatedIds.length}</strong> feedback items
+                        </div>
+                        <div class="meta-item">
+                            <span class="unique-reporters">
+                                👥 <strong>${issue.unique_reporters_count || uniqueReporters.length}</strong> unique reporters
+                            </span>
                         </div>
                         <div class="meta-item">
                             First: <strong>${firstSeen}</strong>
@@ -447,19 +499,19 @@
             if (issue.status === 'new') {
                 return `
                     <div class="action-buttons">
-                        <button class="btn btn-pending" onclick="updateStatus(${issue.id}, 'pending')">
-                            Mark as Pending
+                        <button class="btn btn-pending" onclick="updateStatus(${issue.id}, 'in-progress')">
+                            Start Working (In Progress)
                         </button>
-                        <button class="btn btn-resolved" onclick="updateStatus(${issue.id}, 'resolved')">
-                            Mark as Resolved
+                        <button class="btn btn-resolved" onclick="updateStatus(${issue.id}, 'fixed')">
+                            Mark as Fixed
                         </button>
                     </div>
                 `;
-            } else if (issue.status === 'pending') {
+            } else if (issue.status === 'in-progress') {
                 return `
                     <div class="action-buttons">
-                        <button class="btn btn-resolved" onclick="updateStatus(${issue.id}, 'resolved')">
-                            Mark as Resolved
+                        <button class="btn btn-resolved" onclick="updateStatus(${issue.id}, 'fixed')">
+                            Mark as Fixed
                         </button>
                     </div>
                 `;

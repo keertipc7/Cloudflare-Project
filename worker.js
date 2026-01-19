@@ -62,16 +62,12 @@ export default {
       return handleGetNewIssues(env, corsHeaders);
     }
     
-    if (url.pathname === '/api/issues/resolved') {
-      return handleGetResolvedIssues(env, corsHeaders);
+    if (url.pathname === '/api/issues/in-progress') {
+      return handleGetInProgressIssues(env, corsHeaders);
     }
     
-    if (url.pathname === '/api/issues/pending') {
-      return handleGetPendingIssues(env, corsHeaders);
-    }
-    
-    if (url.pathname === '/api/issues/trending') {
-      return handleGetTrendingIssues(env, corsHeaders);
+    if (url.pathname === '/api/issues/fixed') {
+      return handleGetFixedIssues(env, corsHeaders);
     }
     
     if (url.pathname === '/api/stats') {
@@ -194,7 +190,7 @@ Respond in JSON format:
 async function consolidateIssues(env) {
   // Get all analyzed issues that aren't consolidated yet
   const { results: issues } = await env.DB.prepare(`
-    SELECT ai.*, rf.source, rf.timestamp, rf.id as feedback_id
+    SELECT ai.*, rf.source, rf.timestamp, rf.author, rf.id as feedback_id
     FROM analyzed_issues ai
     JOIN raw_feedback rf ON ai.feedback_id = rf.id
     WHERE ai.is_issue = 1
@@ -216,7 +212,12 @@ async function consolidateIssues(env) {
   // Create or update consolidated issues
   for (const [signature, groupIssues] of Object.entries(groups)) {
     const keywords = signature.split('|').filter(k => k);
-    const title = generateTitle(keywords, groupIssues[0].summary);
+    
+    // Use the most recent summary for the title (most recent feedback likely has best context)
+    const mostRecentIssue = groupIssues.reduce((latest, current) => 
+      current.timestamp > latest.timestamp ? current : latest
+    );
+    const title = generateTitle(keywords, mostRecentIssue.summary);
     
     // Check if this consolidated issue exists
     const { results: existing } = await env.DB.prepare(
@@ -224,6 +225,11 @@ async function consolidateIssues(env) {
     ).bind(JSON.stringify(keywords)).all();
 
     const feedbackIds = groupIssues.map(i => i.feedback_id);
+    
+    // Get unique reporters (people reporting similar issues across channels)
+    const uniqueReporters = [...new Set(groupIssues.map(i => i.author).filter(a => a))];
+    const uniqueReportersCount = uniqueReporters.length;
+    
     const firstSeen = groupIssues.reduce((min, i) => 
       i.timestamp < min ? i.timestamp : min, groupIssues[0].timestamp
     );
@@ -240,32 +246,43 @@ async function consolidateIssues(env) {
 
     if (existing.length > 0) {
       // Update existing
+      const oldScore = existing[0].weighted_score;
+      const scoreAtChange = existing[0].score_at_status_change || oldScore;
+      
       await env.DB.prepare(`
         UPDATE consolidated_issues 
         SET last_seen = ?,
             count_last_30_days = ?,
+            unique_reporters_count = ?,
             related_feedback_ids = ?,
+            unique_reporters = ?,
             last_updated = CURRENT_TIMESTAMP
         WHERE id = ?
       `).bind(
         lastSeen,
         countLast30Days,
+        uniqueReportersCount,
         JSON.stringify(feedbackIds),
+        JSON.stringify(uniqueReporters),
         existing[0].id
       ).run();
     } else {
       // Create new
       await env.DB.prepare(`
         INSERT INTO consolidated_issues 
-        (title, keywords, first_seen, last_seen, count_last_30_days, related_feedback_ids)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (title, keywords, first_seen, last_seen, count_last_30_days, 
+         unique_reporters_count, related_feedback_ids, unique_reporters, score_at_status_change)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         title,
         JSON.stringify(keywords),
         firstSeen,
         lastSeen,
         countLast30Days,
-        JSON.stringify(feedbackIds)
+        uniqueReportersCount,
+        JSON.stringify(feedbackIds),
+        JSON.stringify(uniqueReporters),
+        0 // Initial score_at_status_change
       ).run();
     }
   }
@@ -288,14 +305,19 @@ async function updateWeightedScores(env) {
       `SELECT source FROM raw_feedback WHERE id IN (${placeholders})`
     ).bind(...feedbackIds).all();
 
-    // Calculate weighted score
-    let totalScore = 0;
+    // Calculate base weighted score from sources
+    let baseScore = 0;
     for (const fb of feedbacks) {
-      totalScore += SOURCE_WEIGHTS[fb.source] || 1;
+      baseScore += SOURCE_WEIGHTS[fb.source] || 1;
     }
 
     // Multiply by count for amplification
-    const weightedScore = totalScore * issue.count_last_30_days;
+    let weightedScore = baseScore * issue.count_last_30_days;
+    
+    // Add bonus for unique reporters across channels (cross-channel reporting is more significant)
+    // This accounts for people reporting similar issues across different channels
+    const uniqueReportersBonus = issue.unique_reporters_count * 2;
+    weightedScore += uniqueReportersBonus;
 
     await env.DB.prepare(
       'UPDATE consolidated_issues SET weighted_score = ? WHERE id = ?'
@@ -305,8 +327,28 @@ async function updateWeightedScores(env) {
 
 // Generate a title from keywords
 function generateTitle(keywords, summary) {
+  // Use AI-generated summary as the title for better readability
+  // Fallback to keywords if summary is not available
+  if (summary && summary.trim().length > 0) {
+    let cleanSummary = summary.trim();
+    
+    // Remove any quotes that AI might have added
+    cleanSummary = cleanSummary.replace(/^["']|["']$/g, '');
+    
+    // Ensure it starts with capital letter
+    cleanSummary = cleanSummary.charAt(0).toUpperCase() + cleanSummary.slice(1);
+    
+    // Limit to 120 characters for better UI display
+    if (cleanSummary.length > 120) {
+      cleanSummary = cleanSummary.substring(0, 117) + '...';
+    }
+    
+    return cleanSummary;
+  }
+  
+  // Fallback: use keywords if no summary
   if (keywords.length === 0) {
-    return summary.substring(0, 60);
+    return 'Uncategorized Issue';
   }
   return keywords.map(k => 
     k.charAt(0).toUpperCase() + k.slice(1)
@@ -334,9 +376,9 @@ async function handleGetNewIssues(env, headers) {
   });
 }
 
-async function handleGetResolvedIssues(env, headers) {
+async function handleGetInProgressIssues(env, headers) {
   const { results } = await env.DB.prepare(
-    "SELECT * FROM consolidated_issues WHERE status = 'resolved' ORDER BY last_seen DESC"
+    "SELECT * FROM consolidated_issues WHERE status = 'in-progress' ORDER BY weighted_score DESC"
   ).all();
   
   return new Response(JSON.stringify(results), {
@@ -344,25 +386,10 @@ async function handleGetResolvedIssues(env, headers) {
   });
 }
 
-async function handleGetPendingIssues(env, headers) {
+async function handleGetFixedIssues(env, headers) {
   const { results } = await env.DB.prepare(
-    "SELECT * FROM consolidated_issues WHERE status = 'pending' ORDER BY weighted_score DESC"
+    "SELECT * FROM consolidated_issues WHERE status = 'fixed' ORDER BY last_seen DESC"
   ).all();
-  
-  return new Response(JSON.stringify(results), {
-    headers: { ...headers, 'Content-Type': 'application/json' }
-  });
-}
-
-async function handleGetTrendingIssues(env, headers) {
-  // Trending = pending issues with increased activity
-  const { results } = await env.DB.prepare(`
-    SELECT * FROM consolidated_issues 
-    WHERE status = 'pending' 
-    AND count_last_30_days >= 3
-    ORDER BY count_last_30_days DESC, weighted_score DESC
-    LIMIT 10
-  `).all();
   
   return new Response(JSON.stringify(results), {
     headers: { ...headers, 'Content-Type': 'application/json' }
@@ -372,16 +399,16 @@ async function handleGetTrendingIssues(env, headers) {
 async function handleGetStats(env, headers) {
   const stats = await env.DB.batch([
     env.DB.prepare("SELECT COUNT(*) as count FROM consolidated_issues WHERE status = 'new'"),
-    env.DB.prepare("SELECT COUNT(*) as count FROM consolidated_issues WHERE status = 'pending'"),
-    env.DB.prepare("SELECT COUNT(*) as count FROM consolidated_issues WHERE status = 'resolved'"),
+    env.DB.prepare("SELECT COUNT(*) as count FROM consolidated_issues WHERE status = 'in-progress'"),
+    env.DB.prepare("SELECT COUNT(*) as count FROM consolidated_issues WHERE status = 'fixed'"),
     env.DB.prepare("SELECT COUNT(*) as count FROM raw_feedback"),
     env.DB.prepare("SELECT COUNT(*) as count FROM raw_feedback WHERE processed = 1")
   ]);
 
   const response = {
     newIssues: stats[0].results[0].count,
-    pendingIssues: stats[1].results[0].count,
-    resolvedIssues: stats[2].results[0].count,
+    inProgressIssues: stats[1].results[0].count,
+    fixedIssues: stats[2].results[0].count,
     totalFeedback: stats[3].results[0].count,
     processedFeedback: stats[4].results[0].count
   };
@@ -407,18 +434,22 @@ async function handleUpdateStatus(request, env, headers) {
   }
 
   const oldStatus = results[0].status;
-  const oldScore = results[0].weighted_score;
+  const currentScore = results[0].weighted_score;
 
-  // Update status
+  // Update status and capture score at status change
   await env.DB.prepare(
-    'UPDATE consolidated_issues SET status = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?'
-  ).bind(newStatus, issueId).run();
+    `UPDATE consolidated_issues 
+     SET status = ?, 
+         score_at_status_change = ?,
+         last_updated = CURRENT_TIMESTAMP 
+     WHERE id = ?`
+  ).bind(newStatus, currentScore, issueId).run();
 
   // Log status change
   await env.DB.prepare(
     `INSERT INTO status_changes (issue_id, old_status, new_status, old_score, new_score)
      VALUES (?, ?, ?, ?, ?)`
-  ).bind(issueId, oldStatus, newStatus, oldScore, oldScore).run();
+  ).bind(issueId, oldStatus, newStatus, currentScore, currentScore).run();
 
   return new Response(JSON.stringify({ success: true }), {
     headers: { ...headers, 'Content-Type': 'application/json' }

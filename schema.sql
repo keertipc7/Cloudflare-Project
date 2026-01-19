@@ -39,9 +39,12 @@ CREATE TABLE IF NOT EXISTS consolidated_issues (
     first_seen DATETIME NOT NULL,
     last_seen DATETIME NOT NULL,
     count_last_30_days INTEGER DEFAULT 1,
+    unique_reporters_count INTEGER DEFAULT 1, -- Count of unique people reporting this issue
     weighted_score REAL DEFAULT 0,
-    status TEXT DEFAULT 'new', -- new, pending, resolved, deployed
+    score_at_status_change REAL DEFAULT 0, -- Score when status last changed
+    status TEXT DEFAULT 'new', -- new, in-progress, fixed
     related_feedback_ids TEXT, -- JSON array of feedback IDs
+    unique_reporters TEXT, -- JSON array of unique authors
     last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
