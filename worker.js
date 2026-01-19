@@ -96,7 +96,7 @@ export default {
 async function processFeedback(env) {
   // Get unprocessed feedback
   const { results } = await env.DB.prepare(
-    'SELECT * FROM raw_feedback WHERE processed = 0 LIMIT 50'
+    'SELECT * FROM raw_feedback WHERE processed = 0'
   ).all();
 
   console.log(`Processing ${results.length} feedback items`);
