@@ -1,16 +1,30 @@
 {
-	"name": "cloudflare-assignment",
-	"version": "0.0.0",
-	"private": true,
-	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"start": "wrangler dev",
-		"test": "vitest"
-	},
-	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.8.19",
-		"vitest": "~3.2.0",
-		"wrangler": "^4.59.2"
-	}
+  "name": "cloudflare-feedback-aggregator",
+  "version": "1.0.0",
+  "description": "Lean prototype for aggregating and analyzing customer feedback using Cloudflare Workers, AI, and D1",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "db:create": "wrangler d1 create feedback-db",
+    "db:init": "wrangler d1 execute feedback-db --file=schema.sql",
+    "db:seed": "wrangler d1 execute feedback-db --file=dummy-data.sql",
+    "db:query": "wrangler d1 execute feedback-db --command",
+    "setup": "npm run db:init && npm run db:seed && npm run deploy",
+    "process": "curl https://feedback-aggregator.YOUR-SUBDOMAIN.workers.dev/api/process"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "ai",
+    "d1",
+    "feedback",
+    "aggregator"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
 }

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Feedback Aggregator - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-card.new { border-left: 4px solid #f59e0b; }
+        .stat-card.pending { border-left: 4px solid #3b82f6; }
+        .stat-card.resolved { border-left: 4px solid #10b981; }
+        .stat-card.total { border-left: 4px solid #8b5cf6; }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .tab {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: #f3f4f6;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .issues-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+
+        .issue-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .issue-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .issue-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+
+        .issue-score {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: 15px;
+        }
+
+        .issue-meta {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .meta-item strong {
+            color: #333;
+        }
+
+        .keywords {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .keyword {
+            background: #f3f4f6;
+            color: #555;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-new { background: #fef3c7; color: #92400e; }
+        .status-pending { background: #dbeafe; color: #1e40af; }
+        .status-resolved { background: #d1fae5; color: #065f46; }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-pending {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-resolved {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .issue-header {
+                flex-direction: column;
+            }
+            
+            .issue-score {
+                margin-left: 0;
+                margin-top: 10px;
+                align-self: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Cloudflare Feedback Aggregator</h1>
+            <p class="subtitle">Real-time feedback analysis from multiple sources</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card new">
+                <h3>New Issues</h3>
+                <div class="value" id="stat-new">-</div>
+            </div>
+            <div class="stat-card pending">
+                <h3>Pending Issues</h3>
+                <div class="value" id="stat-pending">-</div>
+            </div>
+            <div class="stat-card resolved">
+                <h3>Resolved Issues</h3>
+                <div class="value" id="stat-resolved">-</div>
+            </div>
+            <div class="stat-card total">
+                <h3>Total Feedback</h3>
+                <div class="value" id="stat-total">-</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-view="new">New Issues</button>
+            <button class="tab" data-view="pending">Pending Issues</button>
+            <button class="tab" data-view="trending">Trending Issues</button>
+            <button class="tab" data-view="resolved">Resolved - Awaiting Deploy</button>
+        </div>
+
+        <div class="issues-container" id="issues-container">
+            <div class="loading">Loading...</div>
+        </div>
+    </div>
+
+    <button class="refresh-btn" onclick="refreshData()" title="Refresh Data">↻</button>
+
+    <script>
+        // Configuration - UPDATE THIS WITH YOUR WORKER URL
+        const API_URL = 'http://localhost:8787'; // Change to your worker URL in production
+
+        let currentView = 'new';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadIssues('new');
+            setupTabs();
+        });
+
+        // Setup tab switching
+        function setupTabs() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentView = tab.dataset.view;
+                    loadIssues(currentView);
+                });
+            });
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/api/stats`);
+                const stats = await response.json();
+                
+                document.getElementById('stat-new').textContent = stats.newIssues;
+                document.getElementById('stat-pending').textContent = stats.pendingIssues;
+                document.getElementById('stat-resolved').textContent = stats.resolvedIssues;
+                document.getElementById('stat-total').textContent = stats.totalFeedback;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load issues based on view
+        async function loadIssues(view) {
+            const container = document.getElementById('issues-container');
+            container.innerHTML = '<div class="loading">Loading...</div>';
+
+            try {
+                const endpoint = `/api/issues/${view}`;
+                const response = await fetch(`${API_URL}${endpoint}`);
+                const issues = await response.json();
+
+                if (issues.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <h3>No issues found</h3>
+                            <p>There are no ${view} issues at the moment.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = issues.map(issue => renderIssue(issue)).join('');
+            } catch (error) {
+                console.error('Error loading issues:', error);
+                container.innerHTML = '<div class="empty-state"><p>Error loading issues. Please try again.</p></div>';
+            }
+        }
+
+        // Render individual issue card
+        function renderIssue(issue) {
+            const keywords = JSON.parse(issue.keywords || '[]');
+            const relatedIds = JSON.parse(issue.related_feedback_ids || '[]');
+            const firstSeen = new Date(issue.first_seen).toLocaleDateString();
+            const lastSeen = new Date(issue.last_seen).toLocaleDateString();
+
+            return `
+                <div class="issue-card">
+                    <div class="issue-header">
+                        <div class="issue-title">${issue.title}</div>
+                        <div class="issue-score">Score: ${Math.round(issue.weighted_score)}</div>
+                    </div>
+                    
+                    <div class="issue-meta">
+                        <div class="meta-item">
+                            <strong>${issue.count_last_30_days}</strong> occurrences (30 days)
+                        </div>
+                        <div class="meta-item">
+                            <strong>${relatedIds.length}</strong> feedback items
+                        </div>
+                        <div class="meta-item">
+                            First: <strong>${firstSeen}</strong>
+                        </div>
+                        <div class="meta-item">
+                            Last: <strong>${lastSeen}</strong>
+                        </div>
+                    </div>
+
+                    <div class="keywords">
+                        ${keywords.map(kw => `<span class="keyword">${kw}</span>`).join('')}
+                    </div>
+
+                    <div>
+                        <span class="status-badge status-${issue.status}">${issue.status}</span>
+                    </div>
+
+                    ${renderActionButtons(issue)}
+                </div>
+            `;
+        }
+
+        // Render action buttons based on status
+        function renderActionButtons(issue) {
+            if (issue.status === 'new') {
+                return `
+                    <div class="action-buttons">
+                        <button class="btn btn-pending" onclick="updateStatus(${issue.id}, 'pending')">
+                            Mark as Pending
+                        </button>
+                        <button class="btn btn-resolved" onclick="updateStatus(${issue.id}, 'resolved')">
+                            Mark as Resolved
+                        </button>
+                    </div>
+                `;
+            } else if (issue.status === 'pending') {
+                return `
+                    <div class="action-buttons">
+                        <button class="btn btn-resolved" onclick="updateStatus(${issue.id}, 'resolved')">
+                            Mark as Resolved
+                        </button>
+                    </div>
+                `;
+            }
+            return '';
+        }
+
+        // Update issue status
+        async function updateStatus(issueId, newStatus) {
+            try {
+                const response = await fetch(`${API_URL}/api/update-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ issueId, newStatus })
+                });
+
+                if (response.ok) {
+                    await loadStats();
+                    await loadIssues(currentView);
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+                alert('Failed to update status. Please try again.');
+            }
+        }
+
+        // Refresh all data
+        async function refreshData() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.style.transform = 'rotate(360deg)';
+            
+            await Promise.all([
+                loadStats(),
+                loadIssues(currentView)
+            ]);
+
+            setTimeout(() => {
+                btn.style.transform = 'rotate(0deg)';
+            }, 500);
+        }
+
+        // Auto-refresh every 5 minutes
+        setInterval(refreshData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

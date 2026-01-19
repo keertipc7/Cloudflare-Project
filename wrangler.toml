@@ -1,0 +1,25 @@
+name = "feedback-aggregator"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Cron trigger - runs every 6 hours
+[triggers]
+crons = ["0 */6 * * *"]
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "feedback-db"
+database_id = "your-database-id" # Replace after creating D1 database
+
+# Workers AI binding
+[ai]
+binding = "AI"
+
+# Development configuration
+[env.development]
+vars = { ENVIRONMENT = "development" }
+
+# Production configuration  
+[env.production]
+vars = { ENVIRONMENT = "production" }
