@@ -80,6 +80,92 @@ Example: "Score: 250 ↑ +45 since in-progress started"
 Helps identify: "We're working on it, but it's getting worse"
 
 ---
+## Core Application Files
+
+| File | Purpose | Cloudflare Product Used |
+|------|---------|------------------------|
+| **worker.js** | Main application logic - handles cron jobs, API endpoints, AI analysis, and issue consolidation | Workers + Workers AI |
+| **wrangler.toml** | Cloudflare configuration - defines worker settings, cron schedule, and resource bindings | Workers (config) |
+| **schema.sql** | Database structure - creates 4 tables for storing feedback and consolidated issues | D1 Database |
+| **dummy-data.sql** | Sample data - 70 realistic feedback items for testing | D1 Database |
+| **index.html** | Dashboard UI - displays issues in 3 tabs (New, In Progress, Fixed) | Pages (optional) |
+
+---
+
+## Documentation Files
+
+| File | Purpose |
+|------|---------|
+| **PROJECT_DOCUMENTATION.md** | **Main documentation** - explains what the project is and how it works (195 lines) |
+| **DEPLOYMENT_GUIDE.md** | Step-by-step deployment instructions with troubleshooting |
+| **QUICK_DEPLOY.md** | Copy-paste commands for 5-minute deployment |
+| **CHANGES_SUMMARY.md** | Summary of latest updates and clarifications |
+| **ARCHITECTURE.md** | Visual diagrams of system architecture and data flow |
+
+---
+
+## Supporting Files
+
+| File | Purpose |
+|------|---------|
+| **package.json** | Node.js dependencies and npm scripts |
+| **setup.sh** | Automated deployment script (bash) |
+| **.gitignore** | Git ignore patterns |
+
+---
+
+## Cloudflare Products Summary
+
+### Workers
+**Files:** worker.js, wrangler.toml  
+**Usage:** Runs the entire application - processes feedback every 6 hours via cron, provides API endpoints for the dashboard, orchestrates all logic  
+**Free Tier:** 100,000 requests/day
+
+### Workers AI
+**Files:** worker.js (AI.run calls)  
+**Usage:** Analyzes each feedback item - determines if it's an issue, extracts keywords, generates natural language summaries  
+**Model:** Llama 3.1 8B Instruct  
+**Free Tier:** 10,000 neurons/day
+
+### D1 Database
+**Files:** schema.sql, dummy-data.sql  
+**Usage:** Stores all data in 4 tables - raw feedback, AI analysis, consolidated issues, status changes  
+**Free Tier:** 5GB storage, 5M reads/day, 100K writes/day
+
+### Pages (Optional)
+**Files:** index.html  
+**Usage:** Hosts the dashboard UI - can also be run locally  
+**Free Tier:** Unlimited static requests
+
+---
+
+## File Relationships
+
+```
+wrangler.toml ──┐
+                ├─> Configures worker.js
+worker.js ──────┘
+
+worker.js ──────┐
+                ├─> Reads/writes to D1 (schema.sql structure)
+schema.sql ─────┤
+dummy-data.sql ─┘
+
+worker.js ──────┐
+                ├─> Provides API for index.html
+index.html ─────┘
+
+PROJECT_DOCUMENTATION.md ──> Read this first to understand the project
+DEPLOYMENT_GUIDE.md ──> Follow this to deploy
+```
+
+---
+
+## Total Files: 12
+
+**Essential (5):** worker.js, wrangler.toml, schema.sql, dummy-data.sql, index.html  
+**Documentation (5):** PROJECT_DOCUMENTATION.md, DEPLOYMENT_GUIDE.md, QUICK_DEPLOY.md, CHANGES_SUMMARY.md, ARCHITECTURE.md  
+**Supporting (2):** package.json, setup.sh
 
 ## What Users See
 
