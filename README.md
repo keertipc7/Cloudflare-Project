@@ -1,5 +1,22 @@
 # Cloudflare Feedback Aggregator
 
+## 📑 Contents
+
+- [What Is This?](#what-is-this)
+- [The Problem It Solves](#the-problem-it-solves)
+- [Technical Summary](#technical-summary)
+- [How It Works](#how-it-works)
+- [Core Application Files](#core-application-files)
+- [Documentation Files](#documentation-files)
+- [Supporting Files](#supporting-files)
+- [Cloudflare Products Summary](#cloudflare-products-summary)
+- [File Relationships](#file-relationships)
+- [What Users See](#what-users-see)
+- [Data Storage](#data-storage)
+- [API Endpoints](#api-endpoints)
+- [Sample Data](#sample-data)
+
+
 ## What Is This?
 
 A system that automatically collects customer feedback from multiple sources (Support, Email, GitHub, Discord, Twitter), uses AI to analyze and consolidate similar issues, then prioritizes them based on source reliability and frequency.
@@ -15,6 +32,18 @@ A system that automatically collects customer feedback from multiple sources (Su
 When users report the same issue across different channels:
 - **Without this system:** 15 people reporting "deployment errors" creates 15 separate items to track
 - **With this system:** All 15 reports consolidate into 1 prioritized issue with a clear, readable title
+
+---
+
+## Technical Summary
+
+**Input:** Raw feedback from 5 sources  
+**Processing:** AI classification → Keyword extraction → Consolidation → Scoring  
+**Output:** Prioritized issues with readable titles and cross-channel tracking  
+**Automation:** Every 6 hours via cron  
+**Interface:** 3-tab dashboard (New, In Progress, Fixed)  
+
+**Core Innovation:** Multiple feedback items automatically consolidate into single issues with AI-generated readable titles.
 
 ---
 
@@ -215,62 +244,9 @@ Status: in-progress
 
 ---
 
-## Key Benefits
-
-### 1. Eliminates Duplicate Tracking
-15 reports about the same bug = 1 prioritized issue, not 15 separate items
-
-### 2. Readable Issue Titles
-AI summaries like "Deployment fails with custom domains causing 522 errors"  
-NOT keyword lists like "Deployment + Timeout + Custom-domain Issues"
-
-### 3. Smart Prioritization
-- High-value sources (support tickets) weighted more than low-value (tweets)
-- Cross-channel reporting gives bonus (same person complaining everywhere = bigger problem)
-- 30-day rolling window keeps focus on current issues
-
-### 4. Escalation Detection
-Score delta tracking shows when in-progress issues are getting worse
-
-### 5. Cross-Channel Visibility
-Tracks unique reporters: 15 occurrences from 1 person ≠ 15 from 15 different people
-
-### 6. Zero Infrastructure
-Runs entirely on Cloudflare's free tier with no servers to manage
-
----
-
-## What Makes It Different
-
-**Traditional systems:** Each feedback item is tracked separately  
-**This system:** AI automatically groups similar feedback into single issues
-
-**Traditional titles:** Manual categorization or keyword tags  
-**This system:** AI-generated natural language summaries
-
-**Traditional prioritization:** First-come-first-served or manual  
-**This system:** Weighted by source reliability + frequency + cross-channel reporting
-
-**Traditional status:** Fixed or not fixed  
-**This system:** Shows score changes during work, reveals escalating issues
-
----
-
 ## Sample Data
 
 Prototype includes 70 feedback items across all 5 sources, consolidating into ~5-8 issues with AI titles like:
 - "Deployment fails with custom domains causing 522 timeout errors"
 - "D1 database queries timing out after recent update"  
-NOT: "Deployment + Custom-domain + Timeout Issues"
 
----
-
-## Technical Summary
-
-**Input:** Raw feedback from 5 sources  
-**Processing:** AI classification → Keyword extraction → Consolidation → Scoring  
-**Output:** Prioritized issues with readable titles and cross-channel tracking  
-**Automation:** Every 6 hours via cron  
-**Interface:** 3-tab dashboard (New, In Progress, Fixed)  
-
-**Core Innovation:** Multiple feedback items automatically consolidate into single issues with AI-generated readable titles.

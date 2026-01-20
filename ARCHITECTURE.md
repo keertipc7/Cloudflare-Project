@@ -1,4 +1,13 @@
 # Architecture Diagram - Cloudflare Feedback Aggregator
+## 📑 Contents
+
+- [System Architecture](#system-architecture)
+- [Data Processing Pipeline](#data-processing-pipeline)
+- [Database Schema Relationships](#database-schema-relationships)
+- [Score Calculation Flow](#score-calculation-flow)
+- [Status Lifecycle](#status-lifecycle)
+- [Cron Schedule Visualization](#cron-schedule-visualization)
+- [Issue Consolidation Logic](#issue-consolidation-logic)
 
 ## System Architecture
 
@@ -232,6 +241,13 @@
                                       └─────────────────┘
 ```
 
+**Legend:**
+- PK = Primary Key
+- FK = Foreign Key
+- JSON = JSON-formatted text field
+- ─→ = Data flow direction
+- ◄─ = Relationship/reference
+
 ## Score Calculation Flow
 
 ```
@@ -352,9 +368,4 @@ Individual Feedback Items:
 
 ---
 
-**Legend:**
-- PK = Primary Key
-- FK = Foreign Key
-- JSON = JSON-formatted text field
-- ─→ = Data flow direction
-- ◄─ = Relationship/reference
+
