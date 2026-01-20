@@ -96,10 +96,7 @@ Helps identify: "We're working on it, but it's getting worse"
 
 | File | Purpose |
 |------|---------|
-| **PROJECT_DOCUMENTATION.md** | **Main documentation** - explains what the project is and how it works (195 lines) |
-| **DEPLOYMENT_GUIDE.md** | Step-by-step deployment instructions with troubleshooting |
-| **QUICK_DEPLOY.md** | Copy-paste commands for 5-minute deployment |
-| **CHANGES_SUMMARY.md** | Summary of latest updates and clarifications |
+| **README.md** | **Main documentation** - explains what the project is and how it works (195 lines) |
 | **ARCHITECTURE.md** | Visual diagrams of system architecture and data flow |
 
 ---
@@ -155,8 +152,6 @@ worker.js ──────┐
                 ├─> Provides API for index.html
 index.html ─────┘
 
-PROJECT_DOCUMENTATION.md ──> Read this first to understand the project
-DEPLOYMENT_GUIDE.md ──> Follow this to deploy
 ```
 
 ---
