@@ -104,7 +104,7 @@
 │  │  └────────────┘  └────────────┘  └────────────┘                    │   │
 │  │                                                                       │   │
 │  │  Stats Cards:                                                        │   │
-│  │  [New: 5] [In Progress: 3] [Fixed: 2] [Total Feedback: 70]        │   │
+│  │  [Total Feedback: 70] [New: 5] [In Progress: 3] [Fixed: 2]        │   │
 │  │                                                                       │   │
 │  │  Actions: Start Working (In Progress) | Mark as Fixed              │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
@@ -285,14 +285,9 @@ Individual Feedback Item
           │ User marks as "Resolved"
           ▼
      ┌─────────┐
-     │RESOLVED │  ← Fixed, waiting deployment
+     │RESOLVED │
      └────┬────┘
-          │
-          │ User marks as "Deployed"
-          ▼
-     ┌─────────┐
-     │DEPLOYED │  ← Released to users
-     └─────────┘
+
 ```
 
 ## Cron Schedule Visualization
@@ -310,8 +305,8 @@ Individual Feedback Item
 (next day)
 
 Each run:
-1. Fetch unprocessed feedback (50 items)
-2. Analyze with AI (~30 seconds)
+1. Fetch unprocessed feedback 
+2. Analyze with AI (~30 seconds for 50 items)
 3. Store results in D1
 4. Consolidate similar issues
 5. Recalculate weighted scores
@@ -345,7 +340,7 @@ Individual Feedback Items:
 │              CONSOLIDATED ISSUE                            │
 ├────────────────────────────────────────────────────────────┤
 │ Title: "Custom domain 522 errors affecting production"    │
-│        (AI summary from most recent feedback item)        │
+│        (AI summary)        │
 │                                                            │
 │ Keywords: [deployment, custom-domain]                     │
 │ Occurrences: 3 (in last 30 days)                         │
@@ -357,29 +352,13 @@ Individual Feedback Items:
 
 **Consolidation Rules:**
 1. **Grouping**: Feedback items with identical keyword sets are grouped together
-2. **Title**: Uses AI-generated summary from the most recent feedback item
+2. **Title**: Uses AI-generated summary 
 3. **Scoring**: Aggregates source weights × occurrence count + cross-channel bonus
 4. **Updates**: When new feedback arrives with same keywords, the consolidated issue is updated:
    - Occurrence count increases
    - Weighted score recalculated
    - Last seen timestamp updated
    - If status is "in-progress", score delta is shown
-
-## Free Tier Resource Usage
-
-```
-┌─────────────────────┬──────────┬──────────┬──────────┐
-│ Resource            │ Limit    │ Usage    │ %        │
-├─────────────────────┼──────────┼──────────┼──────────┤
-│ Worker Requests     │ 100K/day │ ~400/day │ 0.4%     │
-│ Workers AI (neurons)│ 10K/day  │ ~500/day │ 5%       │
-│ D1 Storage          │ 5 GB     │ <10 MB   │ <0.1%    │
-│ D1 Reads            │ 5M/day   │ ~1K/day  │ 0.02%    │
-│ D1 Writes           │ 100K/day │ ~200/day │ 0.2%     │
-└─────────────────────┴──────────┴──────────┴──────────┘
-
-✅ All within free tier limits!
-```
 
 ---
 
