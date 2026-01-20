@@ -183,7 +183,7 @@
        │
        ▼
 ┌─────────────┐
-│   OUTPUT    │  Display in UI dashboard with 4 views
+│   OUTPUT    │  Display in UI dashboard with 3 views: New → In Progress → Fixed
 └─────────────┘
 ```
 
