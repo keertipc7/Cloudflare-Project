@@ -142,8 +142,7 @@
        │         CONSOLIDATION PROCESS:
        │         • Multiple feedback items → Single consolidated issue
        │         • Group by: Keyword similarity (exact keyword match)
-       │         • Title: AI-generated summary (NOT keywords!)
-       │         • Summary source: Most recent feedback in the group
+       │         • Title: AI-generated summary
        │         
        │         EXAMPLE:
        │         8 feedback items about "deployment + timeout":
@@ -156,25 +155,16 @@
        │         
        │         Consolidated into 1 issue with:
        │         ✓ Title: "Deployment fails with custom domains causing 522 errors"
-       │         ✓ NOT: "Deployment + Timeout + Custom-domain Issues"
        │         ✓ Count: 8 occurrences
        │         ✓ Unique reporters: 6 people
        │         ✓ Related feedback IDs: [1, 5, 12, 18, 22, 25, 28, 31]
        │
        ▼
 ┌─────────────┐
-│CONSOLIDATION│  Create consolidated issue from grouped feedback
-└──────┬──────┘  - Title: AI summary from first item in group
-       │         - Keywords: Shared keywords across all items
-       │         - Related feedback IDs: All 8 feedback item IDs
-       │         - Unique reporters: Count distinct authors
-       │
-       ▼
-┌─────────────┐
-│  SCORING    │  Calculate: source_weight × count_last_30_days
+│  SCORING    │  Calculate: Sum across channels(source_weight × count_last_30_days)
 └──────┬──────┘  + unique_reporters_count × 2 (cross-channel bonus)
        │         Example: (Support(5)×3 + GitHub(3)×2 + Email(4)×1) 
-       │         = 25 base + 5 reporters×2 = 35 total
+       │         + 5 unique reporters×2 = 35 total
        │
        ▼
 ┌─────────────┐
